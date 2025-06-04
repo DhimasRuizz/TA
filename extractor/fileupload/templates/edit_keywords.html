@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Edit Keywords - Klasifikasi Kelompok Keahlian Tugas Akhir</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gradient-to-r from-blue-50 to-indigo-100">
+
+    <!-- Navbar -->
+    <div class="bg-blue-400 text-white p-6">
+        <h1 class="text-3xl font-bold text-center">Edit Kata Kunci</h1>
+    </div>
+
+    <div class="flex justify-center">
+        <div class="w-full md:w-3/4 p-6 bg-white shadow-md rounded-lg">
+            <form method="POST">
+                {% csrf_token %}
+                <h1 class="text-xl mb-6 font-bold text-center">Edit Kata Kunci Untuk "{{ theme.name }}"</h1>
+                
+                <!-- Fixed Keywords Section -->
+                <div class="mb-4 bg-gray-200 p-4 rounded-lg shadow-md">
+                    <label for="id_fixed_keywords" class="block text-sm mb-3 font-medium text-gray-700">Kata Kunci Tetap</label>
+                    <textarea name="fixed_keywords" id="id_fixed_keywords" rows="5" required class="block w-full p-3 border border-gray-300 rounded-lg" placeholder="Masukkan kata kunci yang dipisahkan dengan koma">{{ form.fixed_keywords.value|default:'' }}</textarea>
+
+                    {% if form.fixed_keywords.errors %}
+                        <p class="text-red-500 text-xs mt-1">{{ form.fixed_keywords.errors|join:", " }}</p>
+                    {% endif %}
+                </div>
+
+                <!-- Display Current Fixed Keywords -->
+                <div class="p-4 bg-gray-100 rounded-lg shadow-md">
+                    <h2 class="text-xl mb-5 font-semibold">Kata Kunci Tetap Saat Ini:</h2>
+                    <ul class="list-disc pl-5 mb-4">
+                        {% for keyword in current_fixed_keywords %}
+                            <li class="text-gray-700">{{ keyword }}</li>
+                        {% endfor %}
+                    </ul>
+                </div>
+
+                <!-- Display Dynamic Keywords (Top TF-IDF Terms) -->
+                <div class="p-4 bg-gray-100 rounded-lg shadow-md">
+                    <h2 class="text-xl font-semibold">Kata Kunci Dinamis (Top TF-IDF):</h2>
+                    <ul class="list-disc pl-5 mb-4">
+                        {% for term, score in top_terms %}
+                            <li class="text-lg text-gray-500"><strong>{{ term }}</strong>: {{ score }}</li>
+                        {% endfor %}
+                    </ul>
+                </div>
+
+                <div class="flex justify-between mt-4">
+                    <button type="submit" class="w-full bg-blue-500 text-white py-2 px-4 rounded-lg hover:bg-blue-400 transition">Simpan Kata Kunci</button>
+                    <a href="{% url 'top_terms' %}" class="w-full bg-gray-300 text-gray-700 py-2 px-4 rounded-lg hover:bg-gray-400 transition text-center">Kembali</a>
+                </div>
+            </form>
+
+        </div>
+    </div>
+    
+</body>
+</html>

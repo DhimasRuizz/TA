@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Upload Artikel - Klasifikasi Kelompok Keahlian Tugas Akhir</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gradient-to-r from-blue-50 to-indigo-100">
+
+    <!-- Navbar -->
+    <div class="bg-blue-400 text-white p-6">
+        <h1 class="text-3xl font-bold text-center"></h1>
+    </div>
+
+    <div class="flex">
+        <!-- Sidebar -->
+        <div class="w-1/4 bg-white p-4 min-h-screen shadow-md">
+            <ul class="space-y-2">
+                <li>
+                    <a href="/dashboard" class="block p-3 rounded hover:bg-blue-200 {% if request.path == '/dashboard' %}bg-blue-300{% endif %} text-gray-700 ">Dashboard</a>
+                </li>
+                <li>
+                    <a href="/upload" class="block p-3 rounded hover:bg-blue-300 {% if request.path == '/upload/' %}bg-blue-400{% endif %} text-white font-bold">Upload Artikel</a>
+                </li>
+                <li>
+                    <a href="/uploaded_documents" class="block p-3 rounded hover:bg-blue-200 {% if request.path == '/uploaded_documents' %}bg-blue-300{% endif %} text-gray-700">Data Artikel</a>
+                </li>
+                <li>
+                    <a href="/topterms" class="block p-3 rounded hover:bg-blue-200 {% if request.path == '/topterms' %}bg-blue-300{% endif %} text-gray-700">Tambah Keyword</a>
+                </li>
+            </ul>
+        </div>
+
+        <!-- Main Content -->
+        <div class="w-full md:w-3/4 p-6 bg-white shadow-md rounded-lg">
+            <div class="mb-6 flex justify-between items-center p-3 rounded-lg bg-gray-200">
+                <h2 class="text-2xl font-bold">Upload DOCX atau PDF</h2>
+            </div>
+
+            <form method="post" enctype="multipart/form-data">
+                {% csrf_token %}
+                <input type="file" name="uploaded_file" id="fileInput" required class="block w-full p-3 mb-4 border border-gray-300 rounded-lg" />
+                
+                <button type="submit" class="w-full bg-blue-600 text-white py-3 rounded-lg hover:bg-blue-400 transition mb-5">Upload</button>
+            </form>
+
+            <!-- Message Section -->
+            {% if message %}
+                <div class="p-4 rounded-lg mb-6 
+                    {% if success %}
+                        bg-green-100 border-l-4 border-green-500
+                    {% else %}
+                        bg-red-100 border-l-4 border-red-500
+                    {% endif %}">
+                    {% if success %}
+                        <p class="text-green-600 font-semibold">{{ message }}</p>
+                    {% else %}
+                        <p class="text-red-600 font-semibold">{{ message }}</p>
+                    {% endif %}
+                </div>
+            {% endif %}
+
+            <!-- Document Results -->
+            {% if result %}
+                <div class="bg-white p-6 rounded-lg shadow-lg">
+                    <p class="text-lg"><strong>{{ result.title }}</strong></p>
+                    <div class="bg-blue-50 p-4 rounded-lg mt-4">
+                        <p><strong>Hasil Klasifikasi Kelompok Keahlian:</strong> <span class="text-blue-600">{{ result.theme_name }}</span></p>
+                        <p><strong>Confidence Score:</strong> {{ result.confidence_score|floatformat:2 }}</p>
+                    </div>
+                </div>
+            {% endif %}
+
+            <!-- Document Results: Similar Docs -->
+            {% if similar_docs %}
+                <div class="bg-white p-6 rounded-lg shadow-lg mt-6">
+                    <h3 class="text-2xl font-bold mb-4">Dokumen dengan Tema yang Sama</h3>
+                    <ul class="space-y-4">
+                        {% for doc, score in similar_docs %}
+                            <li class="p-4 bg-blue-50 rounded-lg shadow-sm">
+                                <div class="flex justify-between items-center">
+                                    <a 
+                                        href="{{ doc.uploaded_file.url }}" 
+                                        target="_blank" 
+                                        class="text-l font-semibold text-blue-600 hover:underline hover:text-blue-800 transition">
+                                        {{ doc.title }}
+                                    </a>
+                                </div>
+                                <p class="text-gray-600">Similarity Score: <strong>{{ score|floatformat:2 }}</strong></p>
+                            </li>
+                        {% endfor %}
+                    </ul>
+                </div>
+            {% endif %}
+        </div>
+    </div>
+</body>
+</html>

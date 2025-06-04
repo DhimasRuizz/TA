@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Dashboard - Klasifikasi Kelompok Keahlian Tugas Akhir</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gradient-to-r from-blue-50 to-indigo-100">
+
+    <!-- Navbar -->
+    <div class="bg-blue-400 text-white p-6">
+        <h1 class="text-3xl font-bold text-center"></h1>
+    </div>
+
+    <div class="flex">
+        <!-- Sidebar -->
+        <div class="w-1/4 bg-white p-4 min-h-screen shadow-md">
+            <ul class="space-y-2">
+                <li>
+                    <a href="/dashboard" class="block p-3 rounded hover:bg-blue-300 {% if request.path == '/dashboard/' or '/' %}bg-blue-400{% endif %} text-white font-bold">Dashboard</a>
+                </li>
+                <li>
+                    <a href="/upload" class="block p-3 rounded hover:bg-blue-200 {% if request.path == '/upload' %}bg-blue-300{% endif %} text-gray-700">Upload Artikel</a>
+                </li>
+                <li>
+                    <a href="/uploaded_documents" class="block p-3 rounded hover:bg-blue-200 {% if request.path == '/uploaded_documents' %}bg-blue-300{% endif %} text-gray-700">Data Artikel</a>
+                </li>
+                <li>
+                    <a href="/topterms" class="block p-3 rounded hover:bg-blue-200 {% if request.path == '/topterms' %}bg-blue-300{% endif %} text-gray-700">Tambah Keyword</a>
+                </li>
+            </ul>
+        </div>
+
+        <!-- Main Content -->
+        <div class="w-full md:w-3/4 p-6 bg-white shadow-md rounded-lg">
+            <div class="mb-6 flex justify-between items-center p-3 rounded-lg bg-blue-600">
+                <h2 class="text-2xl text-white font-bold">Data Kelompok Keahlian</h2>
+            </div>
+
+            <!-- Total Documents Section -->
+            <div class="mb-6 bg-gray-100 p-6 rounded-lg shadow-xl text-center">
+                <h3 class="text-2xl font-bold mb-2">Total Dokumen Keseluruhan</h3>
+                <p class="text-4xl font-extrabold">{{ total_documents }}</p>
+            </div>
+
+            <!-- Themes Grid -->
+            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-2 gap-6">
+                {% for theme in themes_count %}
+                    <div class="p-6 bg-blue-100 rounded-lg shadow-md hover:bg-blue-200 transition">
+                        <p class="text-xl font-bold text-gray-800">{{ theme.theme }}</p>
+                        <p class="text-lg text-gray-500">Total Dokumen: <strong>{{ theme.count }}</strong></p>
+                    </div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+
+</body>
+</html>
