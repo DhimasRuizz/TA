@@ -64,7 +64,7 @@
             <!-- Document Results -->
             {% if result %}
                 <div class="bg-white p-6 rounded-lg shadow-lg">
-                    <p class="text-lg"><strong>{{ result.title }}</strong></p>
+                    <p class="text-lg"><strong>{{ title }}</strong></p>
                     <div class="bg-blue-50 p-4 rounded-lg mt-4">
                         <p><strong>Hasil Klasifikasi Kelompok Keahlian:</strong> <span class="text-blue-600">{{ result.theme_name }}</span></p>
                         <p><strong>Confidence Score:</strong> {{ result.confidence_score|floatformat:2 }}</p>
@@ -76,18 +76,26 @@
             {% if similar_docs %}
                 <div class="bg-white p-6 rounded-lg shadow-lg mt-6">
                     <h3 class="text-2xl font-bold mb-4">Dokumen dengan Tema yang Sama</h3>
-                    <ul class="space-y-4">
-                        {% for doc, score in similar_docs %}
-                            <li class="p-4 bg-blue-50 rounded-lg shadow-sm">
-                                <div class="flex justify-between items-center">
-                                    <a 
-                                        href="{{ doc.uploaded_file.url }}" 
-                                        target="_blank" 
-                                        class="text-l font-semibold text-blue-600 hover:underline hover:text-blue-800 transition">
-                                        {{ doc.title }}
-                                    </a>
+                    <ul class="divide-y divide-gray-200">
+                        {% for doc in similar_docs %}
+                            <li class="py-4">
+                                <div class="flex justify-between">
+                                    <div>
+                                        <a 
+                                            href="{{ doc.document.uploaded_file.url }}" 
+                                            target="_blank" 
+                                            class="text-lg font-medium text-blue-600 hover:text-blue-800 hover:underline transition"
+                                        >
+                                            {{ doc.document.title }}
+                                        </a>
+                                        <p class="text-sm text-gray-500">Tema: {{ doc.theme }}</p>
                                 </div>
-                                <p class="text-gray-600">Similarity Score: <strong>{{ score|floatformat:2 }}</strong></p>
+                                <div class="text-right">
+                                    <p class="text-sm font-medium text-gray-900">
+                                        Similarity Score: {{ doc.score }}
+                                    </p>
+                                </div>
+                            </div>
                             </li>
                         {% endfor %}
                     </ul>
