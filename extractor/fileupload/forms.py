@@ -14,16 +14,12 @@ class ThemeForm(forms.ModelForm):
         }
 
     def clean_fixed_keywords(self):
-        # Clean and validate keywords
         keywords = [k.strip() for k in self.cleaned_data['fixed_keywords'].split(',') if k.strip()]
-        
-        # Validate number of keywords
+
         if len(keywords) != 15:
             raise forms.ValidationError("Harus ada tepat 15 kata kunci")
         
-        # Validate keyword length
         if any(len(k) < 2 for k in keywords):
             raise forms.ValidationError("Setiap kata kunci harus memiliki minimal 2 karakter")
         
-        # Return cleaned and formatted keywords
         return ', '.join(keywords)

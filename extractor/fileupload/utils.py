@@ -49,13 +49,13 @@ class TextProcessor:
         )
 
     def extract_pdf_text(self, file_path: Path) -> str:
-        """Extract text from PDF file."""
+        """Extract text dari PDF file."""
         try:
             with open(file_path, "rb") as file:
                 reader = PyPDF2.PdfReader(file)
                 return " ".join(page.extract_text() for page in reader.pages)
         except Exception as e:
-            raise ValueError(f"Error extracting PDF text: {e}")
+            raise ValueError(f"Gagal Mengekstrak PDF: {e}")
 
     def extract_docx_text(self, file_path: Path) -> str:
         """Extract text from DOCX file."""
@@ -63,10 +63,10 @@ class TextProcessor:
             doc = docx.Document(file_path)
             return "\n".join(para.text for para in doc.paragraphs)
         except Exception as e:
-            raise ValueError(f"Error reading DOCX file: {e}")
+            raise ValueError(f"Gagal Mengekstrak DOCX : {e}")
 
     def extract_sections(self, text: str) -> ExtractedSections:
-        """Extract sections from document text."""
+        """Extract sections dari dokumen text."""
         results = {}
         cleaned_text = re.sub(r'\s+', ' ', text).strip()
         
@@ -83,32 +83,28 @@ class TextProcessor:
                 conclusion=results.get("conclusion", "Not found")
             )
         except Exception as e:
-            raise ValueError(f"Failed to extract sections: {str(e)}")
+            raise ValueError(f"Gagal Mengextract sections: {str(e)}")
 
     def clean_text(self, text: str) -> str:
-        """Clean and preprocess text for Indonesian language."""
+        """Clean dan preprocess text."""
         try:
-            # Lemmatize using Indonesian lemmatizer
             lemmatized = self.lemmatizer.lemmatize(text)
-            # Replace word elongation (e.g., "selamattttt" -> "selamat")
             processed = replace_word_elongation(lemmatized)
-            # Tokenize
             tokens = nltk.word_tokenize(processed)
-            # Remove stopwords and non-alphabetic tokens
             tokens = [
                 t.lower() for t in tokens 
                 if t.isalpha() and t.lower() not in self.stopwords
             ]
             return " ".join(tokens)
         except Exception as e:
-            raise ValueError(f"Text cleaning failed: {e}")
+            raise ValueError(f"Text cleaning gagal: {e}")
 
     def classify_single_text(self, document: str, themes: Dict[str, Tuple[str, List[str]]], title: Optional[str] = None) -> ClassificationResult:
         try:
-            # Clean and preprocess the document
+            # Clean dan preprocess
             cleaned_doc = self.clean_text(document)
             
-            # Vectorize the cleaned document
+            # Vectorize cleaned text
             X = self.vectorizer.fit_transform([cleaned_doc])
             feature_names = self.vectorizer.get_feature_names_out()
             X_dense = X.toarray()[0]
@@ -120,17 +116,15 @@ class TextProcessor:
                 theme_score = 0
                 keyword_matches = {}
 
-                # Clean and preprocess keywords
+                # Clean dan preprocess keywords
                 clean_keywords = [self.clean_text(kw) for kw in keywords]
 
                 for kw, original_kw in zip(clean_keywords, keywords):
-                    # Find matches in document terms
+                    # Mencari keyword dalam dokumen
                     keyword_score = 0
                     for i, term in enumerate(feature_names):
-                        # Exact match with higher weight
                         if kw == term:
                             keyword_score += X_dense[i] * 3.0
-                        # Partial match with lower weight
                         elif kw in term or term in kw:
                             similarity = len(set(kw.split()) & set(term.split())) / max(len(kw.split()), len(term.split()))
                             if similarity > 0.5:
@@ -140,7 +134,7 @@ class TextProcessor:
                         keyword_matches[original_kw] = keyword_score
                         theme_score += keyword_score
 
-                # Title boost
+                # Jika ada keyword yang cocok dalam judul menambah skor
                 if title:
                     clean_title = self.clean_text(title)
                     title_boost = sum(2.0 for kw in clean_keywords if kw in clean_title)
@@ -148,19 +142,16 @@ class TextProcessor:
 
                 scores[theme_id] = theme_score
 
-            # If no matches found
             if not scores:
-                raise ValueError("No matching themes found for the document")
+                raise ValueError("Tidak ditemukan tema yang cocok dengan dokumen.")
 
-            # Find best match and calculate relative confidence
+            # Mencari tema dengan skor tertinggi
             best_theme_id = max(scores, key=scores.get)
             best_score = scores[best_theme_id]
             
-            # Calculate confidence as a ratio of the best score to the sum of all scores
+            # Menghitung skor normalisasi confidence score
             total_scores = sum(scores.values())
             normalized_score = best_score / total_scores if total_scores > 0 else 0
-
-            # Ensure score is between 0 and 1
             normalized_score = max(0.0, min(1.0, normalized_score))
 
             return ClassificationResult(
@@ -171,41 +162,105 @@ class TextProcessor:
             )
 
         except Exception as e:
-            raise ValueError(f"Classification failed: {str(e)}")
+            raise ValueError(f"Klasifikasi Gagal : {str(e)}")
+
+    # def classify_single_text(self, document: str, themes: Dict[str, Tuple[str, List[str]]], title: Optional[str] = None) -> ClassificationResult:
+    #     try:
+    #         # Clean and preprocess document
+    #         cleaned_doc = self.clean_text(document)
+            
+    #         # Vectorize cleaned text
+    #         doc_vector = self.vectorizer.fit_transform([cleaned_doc])
+    #         feature_names = self.vectorizer.get_feature_names_out()
+            
+    #         scores = {}
+    #         matching_keywords = defaultdict(dict)
+
+    #         for theme_id, (theme_name, keywords) in themes.items():
+    #             theme_score = 0
+    #             keyword_matches = {}
+
+    #             # Clean and preprocess keywords
+    #             clean_keywords = [self.clean_text(kw) for kw in keywords]
+                
+    #             for kw, original_kw in zip(clean_keywords, keywords):
+    #                 # Vectorize keyword
+    #                 kw_vector = self.vectorizer.transform([kw])
+                    
+    #                 # Calculate cosine similarity between document and keyword
+    #                 similarity = cosine_similarity(doc_vector, kw_vector)[0][0]
+                    
+    #                 # Apply weight to exact matches
+    #                 if kw in cleaned_doc:
+    #                     similarity *= 1.5
+                    
+    #                 if similarity > 0:
+    #                     keyword_matches[original_kw] = similarity
+    #                     theme_score += similarity
+                
+    #             # Title boosting if available
+    #             if title:
+    #                 clean_title = self.clean_text(title)
+    #                 title_vector = self.vectorizer.transform([clean_title])
+                    
+    #                 # Check keyword presence in title using cosine similarity
+    #                 for kw, original_kw in zip(clean_keywords, keywords):
+    #                     kw_vector = self.vectorizer.transform([kw])
+    #                     title_similarity = cosine_similarity(title_vector, kw_vector)[0][0]
+                        
+    #                     if title_similarity > 0.5:
+    #                         theme_score *= (1.0 + 0.3 * title_similarity)
+                
+    #             scores[theme_id] = theme_score
+    #             matching_keywords[theme_id] = keyword_matches
+
+    #         if not scores:
+    #             raise ValueError("Tidak ditemukan tema yang cocok dengan dokumen.")
+
+    #         # Find theme with highest score
+    #         best_theme_id = max(scores, key=scores.get)
+    #         best_score = scores[best_theme_id]
+            
+    #         # Normalize confidence score
+    #         total_scores = sum(scores.values())
+    #         normalized_score = best_score / total_scores if total_scores > 0 else 0
+    #         normalized_score = max(0.0, min(1.0, normalized_score))
+
+    #         return ClassificationResult(
+    #             theme_id=best_theme_id,
+    #             theme_name=themes[best_theme_id][0],
+    #             confidence_score=normalized_score,
+    #             matching_keywords=dict(matching_keywords.get(best_theme_id, {}))
+    #         )
+
+    #     except Exception as e:
+    #         raise ValueError(f"Klasifikasi Gagal : {str(e)}")
         
     def get_similar_documents(self, input_text: str, other_docs: List[Tuple[str, str]], top_n: int = 5) -> List[Tuple[int, float, str]]:
         """
-        Get similar documents based on content similarity and theme classification.
-        
-        Args:
-            input_text: The text of the document to compare
-            other_docs: List of tuples containing (document_text, theme_name)
-            top_n: Number of similar documents to return
-            
-        Returns:
-            List of tuples containing (document_index, similarity_score, theme_name)
+        Mencari Dokumen yang mirip dengan dokumen input berdasarkan TF-IDF similarity.
         """
         try:
             if not other_docs:
                 return []
             
-            # Classify the input text to get its theme
+            # Klasifikasi dokumen yang input
             input_theme = self.classify_single_text(input_text, self._get_theme_dict()).theme_name
             
-            # Filter other_docs to only include documents with the same theme
+            # Filter dokumen lain berdasarkan tema yang sama
             same_theme_docs = [
                 (text, theme) for text, theme in other_docs 
                 if theme == input_theme
             ]
             
-            # If no documents with the same theme, return empty list
+            # Jika tidak ada dokumen dengan tema yang sama, kembalikan daftar kosong
             if not same_theme_docs:
                 return []
             
-            # Separate documents and their themes
+            # Pisahkan teks dan tema dari dokumen yang sama
             doc_texts, doc_themes = zip(*same_theme_docs)
             
-            # Clean all texts
+            # Clean
             cleaned_input = self.clean_text(input_text)
             cleaned_docs = [self.clean_text(doc) for doc in doc_texts]
             
@@ -217,7 +272,7 @@ class TextProcessor:
             # Get top N documents
             top_indices = cosine_sim.argsort()[::-1][:top_n]
             
-            # Return results with scores and themes
+            # Return hasil dengan scores dan tema
             return [
                 (int(i), 
                 float(cosine_sim[i]), 
@@ -228,9 +283,8 @@ class TextProcessor:
             raise ValueError(f"Similarity calculation failed: {e}")
 
     def _get_theme_dict(self) -> Dict[str, Tuple[str, List[str]]]:
-        """Helper method to get theme dictionary from database."""
-        from .models import Theme  # Import here to avoid circular import
-        
+        """Helper untuk mengambil dict tema dari database."""
+        from .models import Theme
         themes = Theme.objects.all()
         return {
             str(theme.id): (
@@ -241,7 +295,7 @@ class TextProcessor:
         }
 
     def calculate_top_terms(self, documents: List[str], theme_name: str) -> List[Tuple[str, float]]:
-        """Calculate top TF-IDF terms for a theme."""
+        """Calculate top TF-IDF terms."""
         try:
             if not documents:
                 return []

@@ -26,21 +26,16 @@ class Theme(models.Model):
         return [k.strip() for k in self.dynamic_keywords.split(',')] if self.dynamic_keywords else []
 
     def set_fixed_keywords(self, keywords):
-        # Ensure exactly 15 keywords
         if len(keywords) != 15:
             raise ValueError("Must provide exactly 15 fixed keywords")
-        
-        # Clean and validate keywords
+
         cleaned_keywords = [k.strip() for k in keywords if k.strip()]
         self.fixed_keywords = ', '.join(cleaned_keywords)
 
     def set_dynamic_keywords(self, keywords):
-        # Clean keywords and remove any duplicates with fixed keywords
         fixed_set = set(self.get_fixed_keywords())
         cleaned_keywords = [
             k.strip() for k in keywords 
             if k.strip() and k.strip().lower() not in fixed_set
         ]
-        
-        # Limit to 5 dynamic keywords
         self.dynamic_keywords = ', '.join(cleaned_keywords[:5])

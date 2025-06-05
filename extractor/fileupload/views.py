@@ -18,6 +18,26 @@ from typing import List, Dict
 import os
 import uuid
 
+#DASHBOARD
+def dashboard(request):
+    themes = Theme.objects.all()
+    theme_data = []
+    
+    for theme in themes:
+        count = ProcessedDocument.objects.filter(theme=theme.name).count()
+        theme_data.append({
+            'theme': theme.name,
+            'count': count
+        })
+    
+    total_documents = ProcessedDocument.objects.count()
+    
+    return render(request, 'dashboard.html', {
+        'themes_count': theme_data,
+        'total_documents': total_documents
+    })
+
+#UPLOAD DOKUMEN
 def generate_unique_id():
     while True:
         unique_id = uuid.uuid4().hex
@@ -82,11 +102,11 @@ def upload_file(request):
                         'docs': ProcessedDocument.objects.all()
                     })
 
-                # Clean and process text
+                # Clean dan process text
                 combined_text = f"{title} {sections.abstract} {sections.background} {sections.conclusion}"
                 cleaned_text = processor.clean_text(combined_text)
 
-                # Get themes and their keywords
+                # Ambil tema dan kata kunci
                 themes = Theme.objects.all()
                 theme_dict = {}
                 for theme in themes:
@@ -95,7 +115,7 @@ def upload_file(request):
                     all_keywords = fixed_keywords + dynamic_keywords
                     theme_dict[theme.id] = (theme.name, all_keywords)
 
-                # Classify document
+                # Classify
                 result = processor.classify_single_text(cleaned_text, theme_dict)
 
                 # Save document
@@ -108,7 +128,7 @@ def upload_file(request):
                     uploaded_file=filename_saved
                 )
 
-                # Get similar documents with their themes
+                # Mengambil dokumen yang sudah ada untuk mencari kemiripan
                 existing_docs = ProcessedDocument.objects.exclude(id=saved_doc.id)
                 doc_data = [
                     (doc.cleaned_text, doc.theme) 
@@ -117,7 +137,7 @@ def upload_file(request):
 
                 similar_docs = processor.get_similar_documents(cleaned_text, doc_data)
 
-                # Map results back to documents
+                # Map 
                 similar_results = [
                     {
                         'document': existing_docs[idx],
@@ -144,6 +164,7 @@ def upload_file(request):
         'title': title
     })
 
+#DATA DOKUMEN YANG SUDAH ADA
 def uploaded_documents(request):
     theme_filter = request.GET.get('theme', '')
     
@@ -161,33 +182,80 @@ def uploaded_documents(request):
         'theme_counts': theme_counts_dict
     })
 
-def dashboard(request):
+def delete_document(request, document_id):
+    if request.method == 'POST':
+        document = get_object_or_404(ProcessedDocument, id=document_id)
+        
+        if document.uploaded_file and os.path.isfile(document.uploaded_file.path):
+            try:
+                os.remove(document.uploaded_file.path)
+            except OSError as e:
+                messages.warning(request, f'Error menghapus file: {e}')
+        
+        document.delete()
+        messages.success(request, 'Dokumen berhasil dihapus.')
+        
+    return redirect('uploaded_documents')
+
+#TOP TERMS
+def show_top_terms_view(request):
+    processor = TextProcessor()
     themes = Theme.objects.all()
-    theme_data = []
-    
+    top_terms_data = []
+
+    if request.method == 'POST':
+        for theme in themes:
+            docs = ProcessedDocument.objects.filter(theme=theme.name)
+            doc_texts = [doc.cleaned_text for doc in docs]
+            terms = processor.calculate_top_terms(doc_texts, theme.name)
+            
+            # Mengambil fixed keywords yang sekarang
+            fixed_keywords = set(theme.get_fixed_keywords())
+            
+            # Generate dynamic keywords
+            dynamic_terms = [
+                term for term, _ in terms 
+                if term.lower() not in fixed_keywords
+            ][:5]
+            
+            # Save dynamic keywords
+            theme.set_dynamic_keywords(dynamic_terms)
+            theme.save()
+        
+        messages.success(request, 'Kata kunci dinamis berhasil diperbarui!')
+        return redirect('top_terms')
+
     for theme in themes:
-        count = ProcessedDocument.objects.filter(theme=theme.name).count()
-        theme_data.append({
-            'theme': theme.name,
-            'count': count
+        docs = ProcessedDocument.objects.filter(theme=theme.name)
+        doc_texts = [doc.cleaned_text for doc in docs]
+        terms = processor.calculate_top_terms(doc_texts, theme.name)
+        
+        # Ambil fixed and dynamic keywords sekarang
+        fixed_keywords = theme.get_fixed_keywords()
+        dynamic_keywords = theme.get_dynamic_keywords()
+        
+        top_terms_data.append({
+            'theme': theme,
+            'top_terms': terms,
+            'fixed_keywords': fixed_keywords,
+            'dynamic_keywords': dynamic_keywords
         })
-    
-    total_documents = ProcessedDocument.objects.count()
-    
-    return render(request, 'dashboard.html', {
-        'themes_count': theme_data,
-        'total_documents': total_documents
+
+    return render(request, 'top_terms.html', {
+        'top_terms_data': top_terms_data
     })
 
+#EDIT KATA KUNCI
 def edit_keywords_view(request, theme_id):
     theme = get_object_or_404(Theme, id=theme_id)
     processor = TextProcessor()
 
-    # Get theme documents and calculate terms
+    # Ambil dokumen yang terkait dengan tema ini
     theme_docs = ProcessedDocument.objects.filter(theme=theme.name)
     doc_texts = [doc.cleaned_text for doc in theme_docs]
     
-    # Calculate top terms if documents exist
+    # Menghitung top terms
+    # Jika tidak ada dokumen, top_terms akan kosong
     top_terms = processor.calculate_top_terms(doc_texts, theme.name) if doc_texts else []
 
     if request.method == 'POST':
@@ -214,7 +282,7 @@ def edit_keywords_view(request, theme_id):
                 
                 # Process dynamic keywords
                 if top_terms:
-                    # Filter out fixed keywords and existing dynamic keywords
+                    # Filter fixed keywords dan dynamic keywords yang sudah ada
                     fixed_set = set(k.lower() for k in fixed_keywords)
                     dynamic_terms = []
                     
@@ -226,7 +294,7 @@ def edit_keywords_view(request, theme_id):
                     # Save dynamic keywords
                     theme.set_dynamic_keywords(dynamic_terms)
                 
-                # Save theme with updated keywords
+                # Save updated keywords
                 theme.save()
                 
                 messages.success(request, 'Kata kunci berhasil diperbarui!')
@@ -256,67 +324,3 @@ def edit_keywords_view(request, theme_id):
         'dynamic_keywords': dynamic_keywords,
         'has_documents': bool(doc_texts),
     })
-
-def show_top_terms_view(request):
-    processor = TextProcessor()
-    themes = Theme.objects.all()
-    top_terms_data = []
-
-    if request.method == 'POST':
-        for theme in themes:
-            docs = ProcessedDocument.objects.filter(theme=theme.name)
-            doc_texts = [doc.cleaned_text for doc in docs]
-            terms = processor.calculate_top_terms(doc_texts, theme.name)
-            
-            # Get current fixed keywords
-            fixed_keywords = set(theme.get_fixed_keywords())
-            
-            # Generate dynamic keywords
-            dynamic_terms = [
-                term for term, _ in terms 
-                if term.lower() not in fixed_keywords
-            ][:5]
-            
-            # Save dynamic keywords
-            theme.set_dynamic_keywords(dynamic_terms)
-            theme.save()
-        
-        messages.success(request, 'Kata kunci dinamis berhasil diperbarui!')
-        return redirect('top_terms')
-
-    # For GET request, prepare top terms data
-    for theme in themes:
-        docs = ProcessedDocument.objects.filter(theme=theme.name)
-        doc_texts = [doc.cleaned_text for doc in docs]
-        terms = processor.calculate_top_terms(doc_texts, theme.name)
-        
-        # Get current fixed and dynamic keywords
-        fixed_keywords = theme.get_fixed_keywords()
-        dynamic_keywords = theme.get_dynamic_keywords()
-        
-        top_terms_data.append({
-            'theme': theme,
-            'top_terms': terms,
-            'fixed_keywords': fixed_keywords,
-            'dynamic_keywords': dynamic_keywords
-        })
-
-    # Render the template with top terms data
-    return render(request, 'top_terms.html', {
-        'top_terms_data': top_terms_data
-    })
-
-def delete_document(request, document_id):
-    if request.method == 'POST':
-        document = get_object_or_404(ProcessedDocument, id=document_id)
-        
-        if document.uploaded_file and os.path.isfile(document.uploaded_file.path):
-            try:
-                os.remove(document.uploaded_file.path)
-            except OSError as e:
-                messages.warning(request, f'Error menghapus file: {e}')
-        
-        document.delete()
-        messages.success(request, 'Dokumen berhasil dihapus.')
-        
-    return redirect('uploaded_documents')
